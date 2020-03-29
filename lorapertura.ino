@@ -39,8 +39,18 @@
 #include "LowPower.h"
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <YetAnotherPcInt.h>
 #include <CayenneLPP.h>
-CayenneLPP lpp(18);
+CayenneLPP lpp(10);
+
+// Definición de Pin A2 para Interrupción Sensor Puerta Abierta
+#define pinEventoPuertaAbierta A2
+boolean eventoPuertaAbierta = false;  // Inicializamos la marca de evento de Puerta Abierta a falso
+
+// Sensor de luminosidad - TEMT6000
+#define LIGHTSENSORPIN A0 //Conectado al pin Analogico A0 light sensor reading 
+
+
 
 Adafruit_BME280 bme; // I2C
 
@@ -94,11 +104,12 @@ const lmic_pinmap lmic_pins = {
                                     // DIO1 is on JP5-3: is D2 - we connect to GPO5
 };
 
-// Conectado al pin 3 está el sensor de puerta abierta que activará la interrupción
-const int pinEventoPuertaAbierta = 3;
-boolean eventoPuertaAbierta = false;  // Inicializamos la marca de evento de Puerta Abierta a falso
 int contador = 0;
 boolean completado = false;
+
+unsigned long inicio;   // Para controlar los tiempos de movimiento sin utilizar funciÃƒÂ³n delay.
+unsigned long actual;   // Para controlar los tiempos de movimiento sin utilizar funciÃƒÂ³n delay.
+unsigned long fin;      // Para controlar los tiempos de movimiento sin utilizar funciÃƒÂ³n delay.
 
 
 // Funcion que devuelve el voltaje de las baterías
@@ -154,7 +165,6 @@ void onEvent (ev_t ev) {
             Serial.println(F("EV_REJOIN_FAILED"));
             break;
         case EV_TXCOMPLETE:
-            Serial.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
             if (LMIC.txrxFlags & TXRX_ACK)
               Serial.println(F("Received ack"));
             if (LMIC.dataLen) {
@@ -163,6 +173,7 @@ void onEvent (ev_t ev) {
               Serial.println(F(" bytes of payload"));
             }
             completado = true;
+            Serial.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
             break;
         case EV_LOST_TSYNC:
             Serial.println(F("EV_LOST_TSYNC"));
@@ -207,20 +218,26 @@ void do_send(osjob_t* j){
     // Prepare upstream data transmission at the next possible time.
         lpp.reset();
         lpp.addAnalogInput(1, readVcc() / 1000.F);
-        lpp.addDigitalOutput(2, digitalRead(pinEventoPuertaAbierta));
-        bme.setSampling(Adafruit_BME280::MODE_FORCED,
+        lpp.addDigitalOutput(2, eventoPuertaAbierta);
+        lpp.addDigitalOutput(3, digitalRead(pinEventoPuertaAbierta));
+/*        bme.setSampling(Adafruit_BME280::MODE_FORCED,
                       Adafruit_BME280::SAMPLING_X1, // temperature
                       Adafruit_BME280::SAMPLING_X1, // pressure
                       Adafruit_BME280::SAMPLING_X1, // humidity
                       Adafruit_BME280::FILTER_OFF   );
-        lpp.addTemperature(3, bme.readTemperature());
-        lpp.addBarometricPressure(4, bme.readPressure() / 100.0F);
-        lpp.addRelativeHumidity(5, bme.readHumidity());
-
+*/
+//        lpp.addTemperature(3, bme.readTemperature());
+//        lpp.addBarometricPressure(4, bme.readPressure() / 100.0F);
+//        lpp.addRelativeHumidity(5, bme.readHumidity());
+//        lpp.addTemperature(3, 30);
+//        lpp.addBarometricPressure(4, 600);
+//        lpp.addRelativeHumidity(5, 28);
+//        lpp.addAnalogInput(6, analogRead(LIGHTSENSORPIN));
+        
         // Hemos marcado que queremos recibir el ack.
         LMIC.pendTxConf = false;
         LMIC_setTxData2(1, lpp.getBuffer(), lpp.getSize(), LMIC.pendTxConf);
-        Serial.print(F("Packet queued "));
+        Serial.print(F("Paquete enviado a TTN "));
         Serial.println(digitalRead(pinEventoPuertaAbierta));
       
 //        Prepare upstream data transmission at the next possible time.
@@ -238,7 +255,17 @@ void abriendoPuerta()
   eventoPuertaAbierta = true;
   int value = digitalRead(pinEventoPuertaAbierta);
   Serial.print(F("Abriendo puerta ")); 
-  Serial.print(value); 
+  Serial.println(value); 
+}
+
+void esperaConInterrupciones(int milisegundosEspera)
+{
+    inicio = millis();
+    inicio = inicio + milisegundosEspera;
+    fin = millis();
+    while ( fin >= inicio & not eventoPuertaAbierta ) {
+      fin = millis();
+    }
 }
 
 void setup() {
@@ -246,20 +273,27 @@ void setup() {
   // Depuración y traza de la programación a traves del puerto Serie a 115200 baudios
     while (!Serial); // wait for Serial to be initialized
     Serial.begin(115200);
-    delay(100);     // per sample code on RF_95 test
+    
+    // per sample code on RF_95 test  ¿¿??¿¿??
+    // No entiendo bien por qué este delay de 100 milisegundos.
+    esperaConInterrupciones(100);
     
     Serial.println(F("Setup-Inicio Lorapertura"));
 
   
     // Asociamos el pinEventoPuertaAbierta a la Interrupción.
     pinMode(pinEventoPuertaAbierta, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(pinEventoPuertaAbierta), abriendoPuerta, FALLING);
+    PcInt::attachInterrupt(pinEventoPuertaAbierta, abriendoPuerta, FALLING);
+//    attachInterrupt(digitalPinToInterrupt(pinEventoPuertaAbierta), abriendoPuerta, FALLING);
 
     Serial.println(F("Interrupcion asociada"));
 
+    // Asociamos el pin de entrada analogico al sensor TEMT6000
+    pinMode(LIGHTSENSORPIN,  INPUT);  
+    
     unsigned status;
     
-    status = bme.begin(0x76);  
+/*    status = bme.begin(0x76);  
     if (!status) {
         Serial.println(F("Could not find a valid BME280 sensor"));
         while (1);
@@ -267,9 +301,10 @@ void setup() {
     else {
       Serial.println(F("Sensor BME280 ready"));
     }
+*/
+// Esperamos un segundo antes de iniciarlizar la comunicación Lora
+    esperaConInterrupciones(1000);
 
-
-    delay(1000);
     // LMIC init
     os_init();
     // Reset the MAC state. Session and pending data transfers will be discarded.
@@ -328,28 +363,37 @@ void setup() {
     LMIC.dn2Dr = DR_SF9;
 
     // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
-    LMIC_setDrTxpow(DR_SF7,14);
+    LMIC_setDrTxpow(DR_SF8,14);
 
-    // Start job
-//    do_send(&sendjob);
+// Esperamos un 1/2 segundo despues de iniciarlizar la comunicación Lora
+
+    esperaConInterrupciones(500);
+
+    Serial.println(F("LMIC Lorawan Ready"));
+
+// Esperamos un 1/2 segundo para comenzar envío 
+
+    esperaConInterrupciones(500);
+
+    Serial.println(F("Setup-Fin Lorapertura - Arranca loop"));
+
 }
 
 void loop() {
-
-unsigned long inicio;   // Para controlar los tiempos de movimiento sin utilizar funciÃƒÂ³n delay.
-unsigned long actual;   // Para controlar los tiempos de movimiento sin utilizar funciÃƒÂ³n delay.
-unsigned long fin;      // Para controlar los tiempos de movimiento sin utilizar funciÃƒÂ³n delay.
   
 // No hacemos nada durante 1 minuto.
   Serial.print(contador);Serial.println(F(" Empezamos ciclo loop"));
-  inicio = millis();
-  fin = inicio + 60000;
+  esperaConInterrupciones(500);
+  Serial.print(contador);Serial.println(F(" Vamos a dormir"));
   for (byte i = 0; i < 8; i++) {
     LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
   }
+  esperaConInterrupciones(500);
+  Serial.print(contador);Serial.println(F(" Despertamos a dormir"));
   // Despues del minuto mandamos mensaje para ttnmapper  
   Serial.print(contador);Serial.println(F(" Enviamos a TTN"));
   do_send(&sendjob);
+  Serial.print(contador);Serial.println(F(" Loop run while not completado"));
   do
     os_runloop_once();    
   while (not completado);
