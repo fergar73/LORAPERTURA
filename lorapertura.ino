@@ -43,6 +43,10 @@
 #include <CayenneLPP.h>
 CayenneLPP lpp(25);
 
+// Define el SpreadFactor que se utilizará en la transmisión por Lora
+#define SpreadFactor DR_SF9
+
+
 // Definición de Pin A2 para Interrupción Sensor Puerta Abierta
 #define pinEventoPuertaAbierta A2
 volatile boolean eventoPuertaAbierta = false;  // Inicializamos la marca de evento de Puerta Abierta a falso
@@ -50,8 +54,7 @@ volatile boolean eventoPuertaAbierta = false;  // Inicializamos la marca de even
 // Sensor de luminosidad - TEMT6000
 #define LIGHTSENSORPIN A0 //Conectado al pin Analogico A0 light sensor reading 
 
-
-
+// Sensor BME280 conectado al puerto I2C para datos de temperatura, presión y humedad
 Adafruit_BME280 bme; // I2C
 
 //
@@ -69,15 +72,15 @@ Adafruit_BME280 bme; // I2C
 #endif
 
 // LoRaWAN NwkSKey, network session key
-static const PROGMEM u1_t NWKSKEY[16] = { 0xAD, 0xE4, 0xAE, 0xA8, 0x05, 0x07, 0xEA, 0x72, 0x7E, 0x7B, 0x94, 0x9E, 0x58, 0xDB, 0x73, 0x2B } ;
+static const PROGMEM u1_t NWKSKEY[16] = { 0xE2, 0x9F, 0xB4, 0xBC, 0x12, 0xC2, 0xBD, 0x13, 0x5E, 0x8A, 0xA4, 0xE4, 0xB0, 0x80, 0x4B, 0xAE } ;
 
 // LoRaWAN AppSKey, application session key
-static const u1_t PROGMEM APPSKEY[16] = { 0x53, 0x83, 0x7D, 0x36, 0xC1, 0xD7, 0x0E, 0x0C, 0x26, 0xB7, 0x03, 0x6D, 0xB2, 0x3C, 0x76, 0x80 } ;
+static const u1_t PROGMEM APPSKEY[16] = { 0x42, 0x07, 0xD6, 0xA1, 0xD2, 0x14, 0xC9, 0x33, 0x6C, 0x7C, 0x89, 0x90, 0xC9, 0x10, 0x3B, 0x00 } ;
 
 // LoRaWAN end-device address (DevAddr)
 // See http://thethingsnetwork.org/wiki/AddressSpace
 // The library converts the address to network byte order as needed.
-static const u4_t DEVADDR = 0x26011F52 ; // <-- Change this address for every node!
+static const u4_t DEVADDR = 0x26011AB8 ; // <-- Change this address for every node!
 
 // These callbacks are only used in over-the-air activation, so they are
 // left empty here (we cannot leave them out completely unless
@@ -228,22 +231,22 @@ void do_send(osjob_t* j){
     // Prepare upstream data transmission at the next possible time.
         lpp.reset();
         lpp.addAnalogInput(1, readVcc() / 1000.F);                      // Enviamos Voltaje actual 
-        lpp.addDigitalOutput(2, eventoPuertaAbierta);                   // Enviamos marca si se ha abierto la puerta
-        lpp.addDigitalOutput(3, digitalRead(pinEventoPuertaAbierta));   // Enviamos el estado de la puerta cerrada || abierta
         lpp.addTemperature(4, bme.readTemperature());                   // Enviamos la medición de temperatura
         lpp.addBarometricPressure(5, bme.readPressure() / 100.0F);      // Enviamos la medición de presión
         lpp.addRelativeHumidity(6, bme.readHumidity());                 // Enviamos la medición de humedad
-        lpp.addLuminosity(7,analogRead(LIGHTSENSORPIN));                // Enviamos la medición de luminosidad
-        
+        lpp.addLuminosity(7,analogRead(LIGHTSENSORPIN));                // Enviamos la medición de luminosidad        
         LMIC.pendTxConf = eventoPuertaAbierta;    // Si se ha producido el evento de puerta abierta activamos el envío del mensaje con ACK
+//        LMIC.pendTxConf = false;  // Enviamos sin confirmación
         ev_antes_envio = eventoPuertaAbierta;
+        lpp.addDigitalOutput(2, eventoPuertaAbierta);                   // Enviamos marca si se ha abierto la puerta        
+        lpp.addDigitalOutput(3, digitalRead(pinEventoPuertaAbierta));   // Enviamos el estado de la puerta cerrada || abierta
         LMIC_setTxData2(1, lpp.getBuffer(), lpp.getSize(), LMIC.pendTxConf);  //  Se hace el envío del mensaje a TTN
         ev_despues_envio = eventoPuertaAbierta;
+        Serial.println(eventoPuertaAbierta); 
         if (ev_antes_envio && ev_despues_envio && eventoPuertaAbierta) {
           eventoPuertaAbierta = false;            // Se ha enviado paquete con la marca de puerta abierta. Hay que resetear el evento.
         }
         Serial.print(F("Paquete enviado a TTN "));
-        Serial.println(digitalRead(pinEventoPuertaAbierta));      
     }
     // Next TX is scheduled after TX_COMPLETE event.
 }
@@ -251,18 +254,18 @@ void do_send(osjob_t* j){
 void abriendoPuerta()
 {
   eventoPuertaAbierta = true;
-  Serial.print(F("Abriendo puerta ")); 
-  Serial.println(digitalRead(pinEventoPuertaAbierta)); 
+  Serial.println(F("Evento puerta"));
 }
 
-void esperaConInterrupciones(int milisegundosEspera)
+void esperaConInterrupciones(unsigned long milisegundosEspera)
 {
-    inicio = millis();
-    inicio = inicio + milisegundosEspera;
-    fin = millis();
-    while ( fin >= inicio & not eventoPuertaAbierta ) {
-      fin = millis();
+    actual = millis();
+    Serial.print(actual);    Serial.println(F("Inicio"));
+    fin = actual + milisegundosEspera;
+    while ( (actual <= fin) & (not eventoPuertaAbierta)) {
+      actual = millis();
     }
+    Serial.print(fin);    Serial.println(F("Fin"));
 }
 
 void setup() {
@@ -279,6 +282,7 @@ void setup() {
 
   
     // Asociamos el pinEventoPuertaAbierta a la Interrupción.
+    pinMode(13,OUTPUT);
     pinMode(pinEventoPuertaAbierta, INPUT_PULLUP);
     PcInt::attachInterrupt(pinEventoPuertaAbierta, abriendoPuerta, FALLING);
 //    attachInterrupt(digitalPinToInterrupt(pinEventoPuertaAbierta), abriendoPuerta, FALLING);
@@ -300,7 +304,9 @@ void setup() {
     }
 
 // Esperamos un segundo antes de iniciarlizar la comunicación Lora
+    digitalWrite(13,HIGH);
     esperaConInterrupciones(1000);
+    digitalWrite(13,LOW);
 
     // LMIC init
     os_init();
@@ -354,7 +360,7 @@ void setup() {
     #endif
 
     // 
- //   LMIC_setAdrMode(0);
+    LMIC_setAdrMode(0);
     // Disable link check validation
     LMIC_setLinkCheckMode(0);
 
@@ -362,40 +368,41 @@ void setup() {
     LMIC.dn2Dr = DR_SF9;
 
     // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
-    LMIC_setDrTxpow(DR_SF9,14);
+//    LMIC_setDrTxpow(DR_SF10,14);
+    LMIC_setDrTxpow(SpreadFactor,14);
+
+    LMIC_setClockError(MAX_CLOCK_ERROR * 10 / 100);
 
 // Esperamos un 1/2 segundo despues de iniciarlizar la comunicación Lora
 
-    esperaConInterrupciones(500);
+    esperaConInterrupciones(250);
 
     Serial.println(F("LMIC Lorawan Ready"));
 
 // Esperamos un 1/2 segundo para comenzar envío 
 
-    esperaConInterrupciones(500);
+    esperaConInterrupciones(250);
 
     Serial.println(F("Setup-Fin Lorapertura - Arranca loop"));
 
 }
 
 void loop() {
-  
-// No hacemos nada durante 1 minuto.
-  Serial.print(contador);Serial.println(F(" Empezamos ciclo loop"));
-  esperaConInterrupciones(500);
-  Serial.print(contador);Serial.println(F(" Vamos a dormir"));
-  for (byte i = 0; i < 8; i++) {
-    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
-  }
-  esperaConInterrupciones(500);
-  Serial.print(contador);Serial.println(F(" Despertamos de dormir"));
+// No hacemos nada durante 2 minutos.
+  Serial.print(contador);Serial.println(F(" Empezamos ciclo loop - sleep 120"));
+  esperaConInterrupciones(120000);  
+//  for (byte i = 0; i < 10; i++) {
+//    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+//  }
+  Serial.print(contador);Serial.println(F(" Wake up"));
   // Despues del minuto mandamos mensaje para ttnmapper  
-  Serial.print(contador);Serial.println(F(" Enviamos a TTN"));
+  Serial.print(contador);Serial.println(F(" Send to TTN"));
   do_send(&sendjob);
-  Serial.print(contador);Serial.println(F(" Loop run while not completado"));
-  do
+  Serial.print(contador);Serial.println(F(" While not completado"));
+  do {
     os_runloop_once();    
-  while (not completado);
+    
+  } while (not completado);
   Serial.print(contador);Serial.println(F(" Terminamos ciclo loop"));
   contador = contador + 1;      
   completado = false;
