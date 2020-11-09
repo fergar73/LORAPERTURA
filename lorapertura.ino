@@ -37,14 +37,15 @@
 #include <Wire.h>
 #include <SPI.h>
 #include "LowPower.h"
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+#include <forcedClimate.h>
+//#include <Adafruit_Sensor.h>
+//#include <Adafruit_BME280.h>
 #include <YetAnotherPcInt.h>
 #include <CayenneLPP.h>
 CayenneLPP lpp(25);
 
 // Define el SpreadFactor que se utilizará en la transmisión por Lora
-#define SpreadFactor DR_SF9
+#define SpreadFactor DR_SF8
 
 
 // Definición de Pin A2 para Interrupción Sensor Puerta Abierta
@@ -54,8 +55,9 @@ volatile boolean eventoPuertaAbierta = false;  // Inicializamos la marca de even
 // Sensor de luminosidad - TEMT6000
 #define LIGHTSENSORPIN A0 //Conectado al pin Analogico A0 light sensor reading 
 
-// Sensor BME280 conectado al puerto I2C para datos de temperatura, presión y humedad
-Adafruit_BME280 bme; // I2C
+// Sensor BME280 conectado al puerto I2C en la dirección 0x76 para datos de temperatura, presión y humedad
+//Adafruit_BME280 bme; // I2C
+ForcedClimate climateSensor = ForcedClimate();
 
 //
 // For normal use, we require that you edit the sketch to replace FILLMEIN
@@ -222,18 +224,25 @@ void do_send(osjob_t* j){
         Serial.println(F("OP_TXRXPEND, not sending"));
     } else {
         /* Tomamos la lectura del sensor BME280 para el envío */
-        bme.setSampling(Adafruit_BME280::MODE_FORCED,
-                      Adafruit_BME280::SAMPLING_X1, // temperature
-                      Adafruit_BME280::SAMPLING_X1, // pressure
-                      Adafruit_BME280::SAMPLING_X1, // humidity
-                      Adafruit_BME280::FILTER_OFF   );
+//        bme.setSampling(Adafruit_BME280::MODE_FORCED,
+//                      Adafruit_BME280::SAMPLING_X1, // temperature
+//                      Adafruit_BME280::SAMPLING_X1, // pressure
+//                      Adafruit_BME280::SAMPLING_X1, // humidity
+//                      Adafruit_BME280::FILTER_OFF   );
 
     // Prepare upstream data transmission at the next possible time.
         lpp.reset();
         lpp.addAnalogInput(1, readVcc() / 1000.F);                      // Enviamos Voltaje actual 
-        lpp.addTemperature(4, bme.readTemperature());                   // Enviamos la medición de temperatura
-        lpp.addBarometricPressure(5, bme.readPressure() / 100.0F);      // Enviamos la medición de presión
-        lpp.addRelativeHumidity(6, bme.readHumidity());                 // Enviamos la medición de humedad
+        climateSensor.takeForcedMeasurement();
+        lpp.addTemperature(4, climateSensor.getTemperatureCelcius());                   // Enviamos la medición de temperatura
+        lpp.addBarometricPressure(5, climateSensor.getPressure());      // Enviamos la medición de presión
+        lpp.addRelativeHumidity(6, climateSensor.getRelativeHumidity());                 // Enviamos la medición de humedad
+//        lpp.addTemperature(4, bme.readTemperature());                   // Enviamos la medición de temperatura
+//        lpp.addBarometricPressure(5, bme.readPressure() / 100.0F);      // Enviamos la medición de presión
+//        lpp.addRelativeHumidity(6, bme.readHumidity());                 // Enviamos la medición de humedad
+//        lpp.addTemperature(4, 21.5);                   // Enviamos la medición de temperatura
+//        lpp.addBarometricPressure(5, 300);      // Enviamos la medición de presión
+//        lpp.addRelativeHumidity(6, 50);                 // Enviamos la medición de humedad
         lpp.addLuminosity(7,analogRead(LIGHTSENSORPIN));                // Enviamos la medición de luminosidad        
         LMIC.pendTxConf = eventoPuertaAbierta;    // Si se ha producido el evento de puerta abierta activamos el envío del mensaje con ACK
 //        LMIC.pendTxConf = false;  // Enviamos sin confirmación
@@ -260,12 +269,12 @@ void abriendoPuerta()
 void esperaConInterrupciones(unsigned long milisegundosEspera)
 {
     actual = millis();
-    Serial.print(actual);    Serial.println(F("Inicio"));
+//    Serial.print(actual);    Serial.println(F("Inicio"));
     fin = actual + milisegundosEspera;
     while ( (actual <= fin) & (not eventoPuertaAbierta)) {
       actual = millis();
     }
-    Serial.print(fin);    Serial.println(F("Fin"));
+//    Serial.print(fin);    Serial.println(F("Fin"));
 }
 
 void setup() {
@@ -294,15 +303,15 @@ void setup() {
     
     unsigned status;
     
-    status = bme.begin(0x76);  
-    if (!status) {
+    climateSensor.begin();  
+/*    if (!status) {
         Serial.println(F("Could not find a valid BME280 sensor"));
         while (1);
     }
     else {
       Serial.println(F("Sensor BME280 ready"));
     }
-
+*/
 // Esperamos un segundo antes de iniciarlizar la comunicación Lora
     digitalWrite(13,HIGH);
     esperaConInterrupciones(1000);
@@ -375,13 +384,13 @@ void setup() {
 
 // Esperamos un 1/2 segundo despues de iniciarlizar la comunicación Lora
 
-    esperaConInterrupciones(250);
+    esperaConInterrupciones(50);
 
     Serial.println(F("LMIC Lorawan Ready"));
 
 // Esperamos un 1/2 segundo para comenzar envío 
 
-    esperaConInterrupciones(250);
+    esperaConInterrupciones(50);
 
     Serial.println(F("Setup-Fin Lorapertura - Arranca loop"));
 
@@ -390,7 +399,7 @@ void setup() {
 void loop() {
 // No hacemos nada durante 2 minutos.
   Serial.print(contador);Serial.println(F(" Empezamos ciclo loop - sleep 120"));
-  esperaConInterrupciones(120000);  
+  esperaConInterrupciones(180000);  
 //  for (byte i = 0; i < 10; i++) {
 //    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
 //  }
