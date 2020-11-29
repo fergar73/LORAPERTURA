@@ -51,6 +51,8 @@ CayenneLPP lpp(25);
 // Definición de Pin A2 para Interrupción Sensor Puerta Abierta
 #define pinEventoPuertaAbierta A2
 volatile boolean eventoPuertaAbierta = false;  // Inicializamos la marca de evento de Puerta Abierta a falso
+boolean ev_antes_envio = false;     // Variable para el control del envio del evento de puerta abierta con ACK
+boolean ev_despues_envio = false;   // Variable para el control del envio del evento de puerta abierta con ACK
 
 // Sensor de luminosidad - TEMT6000
 #define LIGHTSENSORPIN A0 //Conectado al pin Analogico A0 light sensor reading 
@@ -216,8 +218,6 @@ void onEvent (ev_t ev) {
 
 void do_send(osjob_t* j){
 
-  boolean ev_antes_envio = false;
-  boolean ev_despues_envio = false;
   
     // Check if there is not a current TX/RX job running
     if (LMIC.opmode & OP_TXRXPEND) {
@@ -244,18 +244,25 @@ void do_send(osjob_t* j){
 //        lpp.addBarometricPressure(5, 300);      // Enviamos la medición de presión
 //        lpp.addRelativeHumidity(6, 50);                 // Enviamos la medición de humedad
         lpp.addLuminosity(7,analogRead(LIGHTSENSORPIN));                // Enviamos la medición de luminosidad        
-        LMIC.pendTxConf = eventoPuertaAbierta;    // Si se ha producido el evento de puerta abierta activamos el envío del mensaje con ACK
 //        LMIC.pendTxConf = false;  // Enviamos sin confirmación
         ev_antes_envio = eventoPuertaAbierta;
         lpp.addDigitalOutput(2, eventoPuertaAbierta);                   // Enviamos marca si se ha abierto la puerta        
+        Serial.print(contador);Serial.println(F(" Delay 30 segundos"));
+        delay(15000);
+        Serial.print(contador);Serial.println(F(" Fin Delay 30 segundos"));
         lpp.addDigitalOutput(3, digitalRead(pinEventoPuertaAbierta));   // Enviamos el estado de la puerta cerrada || abierta
+        LMIC.pendTxConf = eventoPuertaAbierta;    // Si se ha producido el evento de puerta abierta activamos el envío del mensaje con ACK
         LMIC_setTxData2(1, lpp.getBuffer(), lpp.getSize(), LMIC.pendTxConf);  //  Se hace el envío del mensaje a TTN
         ev_despues_envio = eventoPuertaAbierta;
-        Serial.println(eventoPuertaAbierta); 
+        Serial.print(F("Paquete enviado a TTN "));
+        Serial.print("ev_antes_envio ");Serial.print(ev_antes_envio);
+        Serial.print(" ev_despues_envio ");Serial.print(ev_despues_envio);
+        Serial.print(" eventoPuertaAbierta ");Serial.println(eventoPuertaAbierta);
         if (ev_antes_envio && ev_despues_envio && eventoPuertaAbierta) {
           eventoPuertaAbierta = false;            // Se ha enviado paquete con la marca de puerta abierta. Hay que resetear el evento.
-        }
-        Serial.print(F("Paquete enviado a TTN "));
+          Serial.print("EventoPuertaReseteado ");Serial.println(eventoPuertaAbierta);
+
+        }  
     }
     // Next TX is scheduled after TX_COMPLETE event.
 }
@@ -278,6 +285,9 @@ void esperaConInterrupciones(unsigned long milisegundosEspera)
 }
 
 void setup() {
+
+    // Encendemos pin para marcar inicio del setup
+    digitalWrite(13,HIGH);
 
   // Depuración y traza de la programación a traves del puerto Serie a 115200 baudios
     while (!Serial); // wait for Serial to be initialized
@@ -312,10 +322,9 @@ void setup() {
       Serial.println(F("Sensor BME280 ready"));
     }
 */
-// Esperamos un segundo antes de iniciarlizar la comunicación Lora
-    digitalWrite(13,HIGH);
-    esperaConInterrupciones(1000);
-    digitalWrite(13,LOW);
+// Esperamos un media segundo antes de iniciarlizar la comunicación Lora
+    esperaConInterrupciones(500);
+
 
     // LMIC init
     os_init();
@@ -391,15 +400,16 @@ void setup() {
 // Esperamos un 1/2 segundo para comenzar envío 
 
     esperaConInterrupciones(50);
-
-    Serial.println(F("Setup-Fin Lorapertura - Arranca loop"));
+    // Apagamos pin al terminar setup
+    digitalWrite(13,LOW);
+    Serial.println(F("Setup-Fin Lorapertura"));
 
 }
 
 void loop() {
 // No hacemos nada durante 2 minutos.
-  Serial.print(contador);Serial.println(F(" Empezamos ciclo loop - sleep 120"));
-  esperaConInterrupciones(180000);  
+  Serial.print(contador);Serial.println(F(" Empezamos ciclo loop - sleep 60"));
+  esperaConInterrupciones(30000);  
 //  for (byte i = 0; i < 10; i++) {
 //    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
 //  }
@@ -415,4 +425,9 @@ void loop() {
   Serial.print(contador);Serial.println(F(" Terminamos ciclo loop"));
   contador = contador + 1;      
   completado = false;
+  ev_antes_envio = false;
+  ev_despues_envio = false;
+  // Sobre-escribir el Spread Factor 
+  LMIC_setDrTxpow(SpreadFactor,14);
+
 }        
