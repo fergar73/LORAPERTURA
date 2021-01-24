@@ -42,7 +42,12 @@
 #include <CayenneLPP.h>
 
 // Define el SpreadFactor fijo que se utilizará en la transmisión Lora
-#define SpreadFactor DR_SF8
+#define SpreadFactor DR_SF7
+// Indicar el tiempo que tarda el mensaje en el aire según el Spread Factor indicado
+// se puede utilizar para ello la utilidad: https://avbentem.github.io/airtime-calculator/ttn
+const unsigned long airTimeMs = 61.7;  // Expresado en milisegundos
+unsigned int frecuenciaEnvioMsg;
+unsigned int tiempoDormido = 0;
 
 // Definición de Pin A2 para Interrupción Sensor Puerta Abierta
 #define pinEventoPuertaAbierta A2
@@ -378,14 +383,21 @@ void setup() {
     digitalWrite(13,LOW);
     Serial.println(F("Setup-Fin Lorapertura"));
 
+    frecuenciaEnvioMsg = 86400 / (30000 / airTimeMs);
+    Serial.println(frecuenciaEnvioMsg);
+    
 }
 
 void loop() {
 // No hacemos nada durante 3 minutos.
-  Serial.print(contador);Serial.println(F(" Empezamos ciclo loop - sleep 180 seg"));
-  esperaConInterrupciones(180000);  
+//  Serial.print(contador);Serial.println(F(" Empezamos ciclo loop - sleep 180 seg"));
+//  esperaConInterrupciones(60000);  
+  tiempoDormido = 0;
+  do {
+    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+    tiempoDormido = tiempoDormido + 8;    
+  } while (tiempoDormido < frecuenciaEnvioMsg);
 //  for (byte i = 0; i < 10; i++) {
-//    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
 //  }
   Serial.print(contador);Serial.println(F(" Wake up"));
   // Despues del minuto mandamos mensaje para ttnmapper  
@@ -394,7 +406,6 @@ void loop() {
   Serial.print(contador);Serial.println(F(" While not completado"));
   do {
     os_runloop_once();    
-    
   } while (not completado);
   Serial.print(contador);Serial.println(F(" Terminamos ciclo loop"));
   contador = contador + 1;      
@@ -403,5 +414,4 @@ void loop() {
   ev_despues_envio = false;
   // Sobre-escribir el Spread Factor 
   LMIC_setDrTxpow(SpreadFactor,14);
-
 }        
