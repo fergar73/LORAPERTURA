@@ -46,8 +46,11 @@
 // Indicar el tiempo que tarda el mensaje en el aire según el Spread Factor indicado
 // se puede utilizar para ello la utilidad: https://avbentem.github.io/airtime-calculator/ttn
 const unsigned long airTimeMs = 61.7;  // Expresado en milisegundos
-unsigned int frecuenciaEnvioMsg;
-unsigned int tiempoDormido = 0;
+
+unsigned int frecuenciaEnvioMsg;  // Tiempo en segundos entre cada envio de mensaje, calculado en función del airTimeMs 
+unsigned int tiempoDormido = 0;   // Control del tiempo que el procesador esta en modo LowPower
+
+boolean modoAhorroEnergia = false; // Para activar o desactivar el modo LowPower  
 
 // Definición de Pin A2 para Interrupción Sensor Puerta Abierta
 #define pinEventoPuertaAbierta A2
@@ -59,6 +62,7 @@ boolean ev_despues_envio = false;               // Contiene el valor de la varia
 
 // Sensor de luminosidad - TEMT6000  
 #define LIGHTSENSORPIN A0     //Conectado al pin Analogico A0 light sensor reading 
+float lux = 0.0;              // Variable para enviar la luminosidad en lux
 
 // Sensor BME280 conectado al puerto I2C en la dirección 0x76 para obtener datos de temperatura, presión y humedad
 ForcedClimate climateSensor = ForcedClimate();
@@ -131,7 +135,6 @@ unsigned long fin;      // Para controlar los tiempos de movimiento sin utilizar
 
 // Funcion que devuelve el voltaje de las baterías
 // Fuente Juan Félix Mateos - Talleres nodo v2.2 TTN MAD
-// Hay que eliminar el delay(2) para evitar problema con las interrupciones.
 
 long readVcc() {
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) |
@@ -189,7 +192,9 @@ void onEvent (ev_t ev) {
               Serial.println(LMIC.dataLen);
               Serial.println(F(" bytes of payload"));
             }
-            completado = true;
+            // Variable completado se marca a cierto cuando se ha completado la transacción de envío.
+            // Nos sirve para dar paso al próximo ciclo de envío con la seguridad que la transacción que estaba siendo gestionada ha terminado.
+            completado = true;  
             Serial.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
             break;
         case EV_LOST_TSYNC:
@@ -239,7 +244,8 @@ void do_send(osjob_t* j){
         lpp.addTemperature(4, climateSensor.getTemperatureCelcius());     // Enviamos la medición de temperatura
         lpp.addBarometricPressure(5, climateSensor.getPressure());        // Enviamos la medición de presión
         lpp.addRelativeHumidity(6, climateSensor.getRelativeHumidity());  // Enviamos la medición de humedad
-        lpp.addLuminosity(7,analogRead(LIGHTSENSORPIN));                  // Enviamos la medición de luminosidad        
+        lux = ((((analogRead(LIGHTSENSORPIN) * 3.3 / 1024) / 10000.0) * 1000000) * 2.0 );  // Obtenemos la medición de luminosidad de TEMT6000 y la pasamos a lux
+        lpp.addLuminosity(7,lux);                                         // Enviamos la medición de luminosidad        
         ev_antes_envio = eventoPuertaAbierta;                             // Guardamos el valor del eventoPuertaAbierta antes del envío
         lpp.addDigitalOutput(2, eventoPuertaAbierta);                     // Enviamos valor de eventoPuertaAbierta para saber si ha saltado la interrupción de Puerta Abierta
         lpp.addDigitalOutput(3, digitalRead(pinEventoPuertaAbierta));     // Estado de la puerta 1 => Cerrada || 0 => Abierta
@@ -270,7 +276,9 @@ void abriendoPuerta()
 void esperaConInterrupciones(unsigned long milisegundosEspera)
 {
     actual = millis();
+    Serial.print(F("Actual "));Serial.println(actual);
     fin = actual + milisegundosEspera;
+    Serial.print(F("Fin "));Serial.println(fin);
     while ( (actual <= fin) & (not eventoPuertaAbierta)) {
       actual = millis();
     }
@@ -365,53 +373,50 @@ void setup() {
     LMIC.dn2Dr = DR_SF9;
 
     // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
-//    LMIC_setDrTxpow(DR_SF10,14);
     LMIC_setDrTxpow(SpreadFactor,14);
 
+    // Se amplia la ventana para la recepción del downlink del ack de los mensajes certificados.
     LMIC_setClockError(MAX_CLOCK_ERROR * 10 / 100);
 
-// Esperamos un 1/2 segundo despues de iniciarlizar la comunicación Lora
-
-    esperaConInterrupciones(50);
-
     Serial.println(F("LMIC Lorawan Ready"));
-
-// Esperamos un 1/2 segundo para comenzar envío 
 
     esperaConInterrupciones(50);
     // Apagamos pin al terminar setup
     digitalWrite(13,LOW);
-    Serial.println(F("Setup-Fin Lorapertura"));
-
+    // Se calcula la frecuencia de envio de mensajes de acuerdo a la politica de acceso justo establecida en The Things Network
     frecuenciaEnvioMsg = 86400 / (30000 / airTimeMs);
     Serial.println(frecuenciaEnvioMsg);
-    
+
+    Serial.println(F("Setup-Fin Lorapertura"));
+ 
 }
 
 void loop() {
-// No hacemos nada durante 3 minutos.
-//  Serial.print(contador);Serial.println(F(" Empezamos ciclo loop - sleep 180 seg"));
-//  esperaConInterrupciones(60000);  
   tiempoDormido = 0;
-  do {
-    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
-    tiempoDormido = tiempoDormido + 8;    
-  } while (tiempoDormido < frecuenciaEnvioMsg);
-//  for (byte i = 0; i < 10; i++) {
-//  }
-  Serial.print(contador);Serial.println(F(" Wake up"));
-  // Despues del minuto mandamos mensaje para ttnmapper  
+  Serial.print(contador);Serial.println(F(" Empezamos ciclo loop"));
+  if (modoAhorroEnergia) {
+    Serial.println(F(" Modo dormido"));
+    do {
+      LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);       // Modo arduino dormido por 8 segundos  -- SLEEP_8S
+      tiempoDormido = tiempoDormido + 8;    
+    } while ((tiempoDormido < frecuenciaEnvioMsg) & (not eventoPuertaAbierta));   // En caso de puerta abierta se avanza para el envio del mensaje
+  }
+  else {
+    Serial.println(F(" Modo espera"));
+    esperaConInterrupciones(long(frecuenciaEnvioMsg) * 1000);
+  }
   Serial.print(contador);Serial.println(F(" Send to TTN"));
-  do_send(&sendjob);
+  do_send(&sendjob);      // Toma de medidas y envío del mensaje a TTN en el próximo ciclo
   Serial.print(contador);Serial.println(F(" While not completado"));
   do {
-    os_runloop_once();    
+    os_runloop_once();    // Gestión del envío y recepción de mensajes enviados por la librería LMIC. Variable completado indica que podemos avanzar al siguiente ciclo de envío.      
   } while (not completado);
+  completado = false;           // Actualizar completado a falso para el próximo ciclo de envío
+  ev_antes_envio = false;       // Se inicializa el control de envío de puerta abierta antes.
+  ev_despues_envio = false;     // Se inicializa el control de envío de puerta abierta despues.
+  // En algun caso para asegurar la recepción de mensajes certificados se hacen reintentos automáticos incrementando el  SF 
+  // Se sobreescribe el SpreadFactor para asegurar el envío en el SF definido.
+  LMIC_setDrTxpow(SpreadFactor,14);    
   Serial.print(contador);Serial.println(F(" Terminamos ciclo loop"));
   contador = contador + 1;      
-  completado = false;
-  ev_antes_envio = false;
-  ev_despues_envio = false;
-  // Sobre-escribir el Spread Factor 
-  LMIC_setDrTxpow(SpreadFactor,14);
 }        
