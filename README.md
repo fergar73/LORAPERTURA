@@ -19,6 +19,8 @@ Two arduino sketches are provided in the software directory depending on the pre
 #### 3D - Caja Dispositivo / Device Enclosure
 Se propone una caja de interior junto con su tapa para fijar el dispositivo a la pared en la carpeta caja-3d. Este dispositivo se ha realizado utilizando freecad
 
+![caja-lorapertura](./images/caja-lorapertura.png)
+
 An indoor box is proposed together with its cover to fix the device to the wall in the box-3d folder.
 
 #### Contribuciones
