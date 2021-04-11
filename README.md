@@ -15,7 +15,7 @@ En la presentacion se indica la forma elegida de conectar los sensores al nodo T
 ### Software
 Se proporcionan dos programas ".ino" de arduino en el directorio del software dependiendo de la forma preferida (OTAA O ABP) de conectar el dispositivo a [The Things Network](https://www.thethingsnetwork.org).
 
-Se ha utilizado el Arduino IDE para este proyecto, los detalles se indican en [SW-Arduino-IDE](https://github.com/fergar73/lorapertura/SW-Arduino-IDE.md)
+Se ha utilizado el Arduino IDE para este proyecto, los detalles se indican en [SW-Arduino-IDE](SW-Arduino-IDE.md)
 
 ### 3D - Caja Dispositivo 
 Se propone una caja de interior junto con su tapa para fijar el dispositivo a la pared en la carpeta caja-3d. Este dispositivo se ha realizado utilizando [freecad](https://www.freecadweb.org)
@@ -26,12 +26,12 @@ La capa de presentación y control del dispositivo lorapertura se ha realizado u
 Aquí está [la información detallada de myiotopentech]( https://github.com/IoTopenTech/myIoTopenTech). El nombre interno del dispositivo lorapetura es TTNMAD-DOOR-BME280-TEMT6000 y a continuación se muestra el panel principal que muestra los datos de lorapertura
 ![panel principal](./images/panel-principal-lorapertura.png)
 
-#### Contribuciones
+### Contribuciones
 Se pueden realizar contribuciones al proyecto, puedes hacer un fork en local y plantear los pull-request con las mejoras realizadas.
 
-#### Licencia
- lorapertura © 2021 por fergar73 esta bajo licencia !(https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png) [Creative Commons Reconocimiento-NoComercial-CompartirIgual 4.0 Internacional License](http://creativecommons.org/licenses/by-nc-sa/4.0/)
+### Licencia
+LORAPERTURA © 2021 por fergar73 esta bajo licencia CC BY-NC-SA [Creative Commons Reconocimiento-NoComercial-CompartirIgual 4.0 Internacional License](http://creativecommons.org/licenses/by-nc-sa/4.0/)
  
-#### Agradecimientos
+### Agradecimientos
 Este proyecto ha sido posible gracias a la extraordinaria labor que se está realizando la comunidad [The Things Network Madrid](https://www.thethingsnetwork.org/community/madrid/)
  

@@ -1,9 +1,7 @@
 ## Programación con Arduino IDE
-
 Puedes instalar el arduino IDE disponible en [arduino.cc](https://www.arduino.cc). Este proyecto ha sido desarrollado con la versión 1.8.13.
 
 ### Dependencias
-
 Este proyecto requiere de la instalación en el arduino IDE de las siguientes librerías. Son necesarias para la compilación y correcto funcionamiento del dispositivo. 
 
 - <lmic.h>             // For the Lorawan comunication - Release v2.3.2
@@ -20,7 +18,7 @@ https://github.com/ElectronicCats/CayenneLPP
 Una vez tengas instalado y descargado el repositorio en el directorio software está el código disponible para compilarlo y subirlo al dispositivo lorapertura.
 Recuerda que debes rellenar los datos concreto de tu dispositivo en FILLMEIN dependiendo de la configuración (OTAA o ABP) de tu dispositivo en [The Things Network](https://www.thethingsnetwork.org)
 
-Lugar del código ABP donde remplazar el FILLMEIN 
+Lugar del código activación ABP donde sustituir el FILLMEIN 
 ```c
 // LoRaWAN NwkSKey, network session key
 static const PROGMEM u1_t NWKSKEY[16] = { FILLMEIN } ;`
@@ -36,11 +34,9 @@ static const u4_t DEVADDR = FILLMEIN ; // <-- Change this address for every node
 
 ### Select board and upload the binary 
 
-Two options selecting the board depending on the bootloader of the ttnmad node:
-If you load the Minicore bootloader as indicated in the doc as optional then select ATmega328 board
+Hay 2 opciones de seleccionar la placa dependiendo del "bootloader" que tenga cargado el nodo TTNMAD.
+Si tiene cargado el Minicore bootloader que se indica en la documentación como paso opcional, hay que indicar la placa ATmega328 
 ![minicore](./images/minicore-board.png)
-otherwise you have to choose the "Arduino Pro or Pro Mini" board.
+si no es el caso hay que seleccionar la placa "Arduino Pro or Pro Mini" con procesador ATmega328P (3.3V,8MHz).
 ![arduino-mini](./images/arduino-mini.png)
-
-Then select the port where the board is connected to the computer in Tools > Ports
-And finally click on the rounded arrow button on the top to upload the project to the board or go to Program > Upload (Ctl+U)
+Seleciona el puerto que esté conectado a la placa y mediante el arduino IDE pulsa la opción de subir el código (Ctl+U)

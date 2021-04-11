@@ -15,7 +15,7 @@ The presentation indicates the way to connect the sensors to the TTN Madrid node
 ### Software
 Two arduino sketches are provided in the software directory depending on the preferred way to authenticate the device (OTAA OR ABP) in [The Things Network](https://www.thethingsnetwork.org).
 
-It's been used Arduino IDE to develop this project, more details available: [SW-Arduino-IDE](https://github.com/fergar73/lorapertura/SW-Arduino-IDE-EN.md)
+It's been used Arduino IDE to develop this project, more details available: [SW-Arduino-IDE](SW-Arduino-IDE-EN.md)
 
 ### 3D Device Enclosure
 An indoor box is proposed together with its cover to fix the device to the wall in the box-3d folder. This enclosure has been developed using [freecad](https://www.freecadweb.org)
@@ -29,10 +29,9 @@ Presentation and control layer of the lorapertura device has been built in [myio
 Here is [the detailed information of myiotopentech](https://github.com/IoTopenTech/myIoTopenTech). The internal name of the lorapetura device is TTNMAD-DOOR-BME280-TEMT6000 and below the main panel showing the loraperture data
 ![panel principal](./images/panel-principal-lorapertura.png)
 
-#### Licencia
-
- lorapertura © 2021 by fergar73 is licensed under CC BY-NC-SA 4.0 - Attribution-NonCommercial-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/
+### License
+LORAPERTURA © 2021 by fergar73 is licensed under CC BY-NC-SA 4.0 [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-nc-sa/4.0/)
  
-#### Agradecimientos
+### Acknowledgment
 This project has been possible thanks to the extraordinary work being done by the community [The Things Network Madrid](https://www.thethingsnetwork.org/community/madrid/)
  

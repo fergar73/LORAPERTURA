@@ -1,9 +1,7 @@
 ## Build on Arduino IDE
-
 You can install the Arduino IDE by downloading it from [arduino.cc](https://www.arduino.cc). This project has been developed using 1.8.13 release. 
 
 ### Installing dependencies
-
 This project relies on several third party dependencies that must be installed in order to be able to build the binary. Below the list of libraries used:
 
 - <lmic.h>             // For the Lorawan comunication - Release v2.3.2
@@ -18,7 +16,7 @@ https://github.com/paulo-raca/YetAnotherArduinoPcIntLibrary
 https://github.com/ElectronicCats/CayenneLPP
 
 Once you have installed and downloaded the repository in the software directory, the code is available to compile it and upload it to the lorapertura device.
-Remember that you must fill in the specific data of your device in FILLMEIN depending on the configuration (OTAA or ABP) of your device in [The Things Network] (https://www.thethingsnetwork.org) 
+Remember that you must fill in the specific data of your device in FILLMEIN depending on the configuration (OTAA or ABP) of your device in [The Things Network](https://www.thethingsnetwork.org) 
 
 Code to replace FILLMEIN in ABP device
 ```c
@@ -35,12 +33,10 @@ static const u4_t DEVADDR = FILLMEIN ; // <-- Change this address for every node
 ```
 
 ### Select board and upload the binary 
-
 Two options selecting the board depending on the bootloader of the ttnmad node:
 If you load the Minicore bootloader as indicated in the doc as optional then select ATmega328 board
 ![minicore](./images/minicore-board.png)
 otherwise you have to choose the "Arduino Pro or Pro Mini" board.
 ![arduino-mini](./images/arduino-mini.png)
-
 Then select the port where the board is connected to the computer in Tools > Ports
 And finally click on the rounded arrow button on the top to upload the project to the board or go to Program > Upload (Ctl+U)
