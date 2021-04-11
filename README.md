@@ -15,7 +15,7 @@ En la presentacion se indica la forma elegida de conectar los sensores al nodo T
 ### Software
 Se proporcionan dos programas ".ino" de arduino en el directorio del software dependiendo de la forma preferida (OTAA O ABP) de conectar el dispositivo a [The Things Network](https://www.thethingsnetwork.org).
 
-Se ha utilizado el Arduino IDE para este proyecto, los detalles se indican en [SW-Arduino-IDE](SW-Arduino-IDE.md)
+Se ha utilizado el Arduino IDE para este proyecto, los detalles se indican en [SW-Arduino-IDE](software/SW-Arduino-IDE.md)
 
 ### 3D - Caja Dispositivo 
 Se propone una caja de interior junto con su tapa para fijar el dispositivo a la pared en la carpeta caja-3d. Este dispositivo se ha realizado utilizando [freecad](https://www.freecadweb.org)

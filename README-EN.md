@@ -15,7 +15,7 @@ The presentation indicates the way to connect the sensors to the TTN Madrid node
 ### Software
 Two arduino sketches are provided in the software directory depending on the preferred way to authenticate the device (OTAA OR ABP) in [The Things Network](https://www.thethingsnetwork.org).
 
-It's been used Arduino IDE to develop this project, more details available: [SW-Arduino-IDE](SW-Arduino-IDE-EN.md)
+It's been used Arduino IDE to develop this project, more details available: [SW-Arduino-IDE](software/SW-Arduino-IDE-EN.md)
 
 ### 3D Device Enclosure
 An indoor box is proposed together with its cover to fix the device to the wall in the box-3d folder. This enclosure has been developed using [freecad](https://www.freecadweb.org)
