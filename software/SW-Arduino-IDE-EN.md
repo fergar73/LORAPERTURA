@@ -37,6 +37,6 @@ Two options selecting the board depending on the bootloader of the ttnmad node:
 If you load the Minicore bootloader as indicated in the doc as optional then select ATmega328 board
 ![minicore](/images/minicore-board.png)
 otherwise you have to choose the "Arduino Pro or Pro Mini" board.
-![arduino-mini](images/arduino-mini.png)
+![arduino-mini](/images/arduino-mini.png)
 Then select the port where the board is connected to the computer in Tools > Ports
 And finally click on the rounded arrow button on the top to upload the project to the board or go to Program > Upload (Ctl+U)

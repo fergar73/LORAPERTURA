@@ -36,7 +36,7 @@ static const u4_t DEVADDR = FILLMEIN ; // <-- Change this address for every node
 
 Hay 2 opciones de seleccionar la placa dependiendo del "bootloader" que tenga cargado el nodo TTNMAD.
 Si tiene cargado el Minicore bootloader que se indica en la documentación como paso opcional, hay que indicar la placa ATmega328 
-![minicore](images/minicore-board.png)
+![minicore](/images/minicore-board.png)
 si no es el caso hay que seleccionar la placa "Arduino Pro or Pro Mini" con procesador ATmega328P (3.3V,8MHz).
-![arduino-mini](images/arduino-mini.png)
+![arduino-mini](/images/arduino-mini.png)
 Seleciona el puerto que esté conectado a la placa y mediante el arduino IDE pulsa la opción de subir el código (Ctl+U)
